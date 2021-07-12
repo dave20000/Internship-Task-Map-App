@@ -1,0 +1,33 @@
+name: app_map
+description: A new Flutter project.
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  build_runner: ^2.0.6
+  cupertino_icons: ^1.0.2
+  dio: ^4.0.0
+  flutter_polyline_points: ^1.0.0
+  geocoding: ^2.0.0
+  geolocator: ^7.2.0+1
+  google_maps_flutter: ^2.0.6
+  kiwi: ^3.0.0
+  kiwi_generator: ^3.0.0
+  location: ^4.3.0
+  provider: ^5.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/car_icon.png
