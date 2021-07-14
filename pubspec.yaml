@@ -18,6 +18,8 @@ dependencies:
   geocoding: ^2.0.0
   geolocator: ^7.2.0+1
   google_maps_flutter: ^2.0.6
+  intl: ^0.17.0
+  jiffy: ^4.1.0
   kiwi: ^3.0.0
   kiwi_generator: ^3.0.0
   location: ^4.3.0

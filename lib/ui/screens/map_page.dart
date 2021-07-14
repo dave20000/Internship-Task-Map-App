@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:app_map/model/map_data.dart';
+import 'package:app_map/model/view_model/previous_tracks_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -71,12 +73,16 @@ class _MapPageState extends State<MapPage> {
             ),
           );
           updateMarker(newLocalData);
-          double distance = calculateDistance(
-            pointLatLngList[pointLatLngList.length - 1],
-            pointLatLngList[pointLatLngList.length - 2],
-          );
-          print(pointLatLngList.length);
-          valueChanged(newLocalData, distance);
+          if (pointLatLngList.length > 1) {
+            double distance = calculateDistance(
+              pointLatLngList[pointLatLngList.length - 1],
+              pointLatLngList[pointLatLngList.length - 2],
+            );
+            print(pointLatLngList.length);
+            valueChanged(newLocalData, distance);
+          } else {
+            valueChanged(newLocalData, 0);
+          }
         }
       });
     } on PlatformException catch (e) {
@@ -119,49 +125,102 @@ class _MapPageState extends State<MapPage> {
               polylines: _polyline,
               myLocationEnabled: true,
             ),
+            !mapViewModel.isMapCleared
+                ? Positioned(
+                    top: 20,
+                    left: 20,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          marker = null;
+                          _polyline = {};
+                          pointLatLngList = [];
+                          mapViewModel.palaceDistance = 0;
+                          mapViewModel.locationData = null;
+                        });
+                        mapViewModel.isMapCleared = true;
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle, color: Colors.amber),
+                        child: Icon(
+                          Icons.clear,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                  )
+                : SizedBox(),
             Positioned(
               bottom: 20,
               right: 20,
-              child: GestureDetector(
-                onTap: () {
-                  if (mapViewModel.isRecordingStarted) {
-                    marker = null;
-                    // _locationSubscription = null;
-                    _locationSubscription!.cancel();
-                    _locationSubscription = null;
-                    mapViewModel.isRecordingStarted = false;
-                    endTime = DateTime.now();
-                    timeTaken =
-                        endTime!.difference(startTime!).inMinutes.toString();
-                  } else {
-                    mapViewModel.isRecordingStarted = true;
-                    _polyline = {};
-                    startTime = DateTime.now();
-                    mapViewModel.palaceDistance = 0;
-                    startLocationRecording((locationData, distance) {
-                      mapViewModel.locationData = locationData;
-                      print(distance);
-                      mapViewModel.palaceDistance =
-                          mapViewModel.palaceDistance + distance;
-                      print(mapViewModel.palaceDistance);
-                    });
-                  }
-                },
-                child: Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.amber),
-                  child: !mapViewModel.isRecordingStarted
-                      ? Icon(
-                          Icons.play_arrow,
-                          size: 30,
-                        )
-                      : Icon(
-                          Icons.pause,
-                          size: 30,
+              child: Consumer<PreviousTrackViewModel>(
+                  builder: (context, previousTrackViewModel, child) {
+                return GestureDetector(
+                  onTap: () {
+                    if (mapViewModel.isMapCleared) {
+                      if (mapViewModel.isRecordingStarted) {
+                        setState(() {
+                          _locationSubscription!.cancel();
+                          _locationSubscription = null;
+                          endTime = DateTime.now();
+                          timeTaken = endTime!
+                              .difference(startTime!)
+                              .inMinutes
+                              .toString();
+                        });
+                        mapViewModel.isRecordingStarted = false;
+                        mapViewModel.isMapCleared = false;
+                        previousTrackViewModel.addNewMapData(MapData(
+                          totalDistance: mapViewModel.palaceDistance,
+                          timeTaken: timeTaken!,
+                          startTime: startTime!,
+                          endTime: endTime!,
+                          pointLatLngList: pointLatLngList,
+                        ));
+                        print(previousTrackViewModel
+                            .mapDatas[
+                                previousTrackViewModel.mapDatas.length - 1]
+                            .totalDistance);
+                      } else {
+                        setState(() {
+                          startTime = DateTime.now();
+                        });
+                        mapViewModel.isRecordingStarted = true;
+                        mapViewModel.palaceDistance = 0;
+                        startLocationRecording((locationData, distance) {
+                          mapViewModel.locationData = locationData;
+                          print(distance);
+                          mapViewModel.palaceDistance =
+                              mapViewModel.palaceDistance + distance;
+                          print(mapViewModel.palaceDistance);
+                        });
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Clear map first"),
                         ),
-                ),
-              ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: Colors.amber),
+                    child: !mapViewModel.isRecordingStarted
+                        ? Icon(
+                            Icons.play_arrow,
+                            size: 30,
+                          )
+                        : Icon(
+                            Icons.pause,
+                            size: 30,
+                          ),
+                  ),
+                );
+              }),
             )
           ],
         );

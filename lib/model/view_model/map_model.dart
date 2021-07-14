@@ -13,6 +13,14 @@ class MapViewModel extends ChangeNotifier {
   LocationData? _locationData;
   double _palaceDistance = 0;
   bool _isRecordingStarted = false;
+  bool _isMapCleared = true;
+  bool get isMapCleared => this._isMapCleared;
+
+  set isMapCleared(bool value) {
+    this._isMapCleared = value;
+    notifyListeners();
+  }
+
   int _currentIndex = 0;
   CameraPosition get initialLocation => this._initialLocation;
 

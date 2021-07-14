@@ -1,7 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MapData {
-  String totalDistance;
+  double totalDistance;
   String timeTaken;
   DateTime startTime;
   DateTime endTime;

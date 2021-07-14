@@ -1,3 +1,5 @@
+import 'package:app_map/model/view_model/previous_tracks_model.dart';
+import 'package:app_map/ui/screens/map_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -13,67 +15,56 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BaseWidget<MapViewModel>(
-      onModelReady: (mapViewModel) async {
-        LocationData location = await Location().getLocation();
-        mapViewModel.initialLocation = CameraPosition(
-          target: LatLng(
-            location.latitude!,
-            location.longitude!,
-          ),
-          zoom: 11.5,
-        );
-      },
-      builder: (context, mapViewModel, child) {
-        return SafeArea(
-          child: Scaffold(
-            body: Consumer<MapViewModel>(
-              builder: (context, mapViewModel, child) {
-                // return child: pages[mapViewModel.currentIndex];
-                return IndexedStack(
-                  index: mapViewModel.currentIndex,
-                  children: pages,
-                );
-              },
+    return BaseWidget<PreviousTrackViewModel>(
+        builder: (context, previousTrackViewModel, child) {
+      return BaseWidget<MapViewModel>(
+        onModelReady: (mapViewModel) async {
+          LocationData location = await Location().getLocation();
+          mapViewModel.initialLocation = CameraPosition(
+            target: LatLng(
+              location.latitude!,
+              location.longitude!,
             ),
-            appBar: AppBar(
-              title: Text("Map App"),
-            ),
-            drawer: Drawer(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const Text('This is the Drawer'),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Close Drawer'),
-                    ),
-                  ],
-                ),
+            zoom: 11.5,
+          );
+        },
+        builder: (context, mapViewModel, child) {
+          return SafeArea(
+            child: Scaffold(
+              body: Consumer<MapViewModel>(
+                builder: (context, mapViewModel, child) {
+                  return IndexedStack(
+                    index: mapViewModel.currentIndex,
+                    children: pages,
+                  );
+                },
+              ),
+              appBar: AppBar(
+                title: Text("Map App"),
+              ),
+              drawer: MapDrawer(
+                mapData: previousTrackViewModel.mapDatas,
+              ),
+              bottomNavigationBar: BottomNavigationBar(
+                currentIndex: mapViewModel.currentIndex,
+                items: [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.map),
+                    label: "Map",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.details),
+                    label: "Details",
+                  ),
+                ],
+                onTap: (index) {
+                  mapViewModel.currentIndex = index;
+                },
               ),
             ),
-            bottomNavigationBar: BottomNavigationBar(
-              currentIndex: mapViewModel.currentIndex,
-              items: [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.map),
-                  label: "Map",
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.details),
-                  label: "Details",
-                ),
-              ],
-              onTap: (index) {
-                mapViewModel.currentIndex = index;
-              },
-            ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    });
   }
 }

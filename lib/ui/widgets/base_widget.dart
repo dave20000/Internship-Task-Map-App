@@ -11,10 +11,10 @@ class BaseWidget<T extends ChangeNotifier> extends StatefulWidget {
   BaseWidget({required this.builder, this.onModelReady, this.onDispose});
 
   @override
-  _BaseWidgetState createState() => _BaseWidgetState();
+  _BaseWidgetState<T> createState() => _BaseWidgetState<T>();
 }
 
-class _BaseWidgetState<T extends ChangeNotifier> extends State<BaseWidget>
+class _BaseWidgetState<T extends ChangeNotifier> extends State<BaseWidget<T>>
     with AutomaticKeepAliveClientMixin {
   final T viewModel = ServiceLocator.resolve<T>();
   @override
