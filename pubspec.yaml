@@ -11,19 +11,36 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  baseflow_plugin_template:
+    git:
+      url: git://github.com/Baseflow/baseflow_plugin_template.git
+      ref: v2.1.0
+  after_layout: ^1.1.0
+  background_locator: ^1.6.4
   build_runner: ^2.0.6
   cupertino_icons: ^1.0.2
   dio: ^4.0.0
+  expandable_bottom_sheet: ^1.1.0
   flutter_polyline_points: ^1.0.0
   geocoding: ^2.0.0
   geolocator: ^7.2.0+1
   google_maps_flutter: ^2.0.6
+  hive: ^2.0.4
   intl: ^0.17.0
+  introduction_screen: ^2.1.0
   jiffy: ^4.1.0
   kiwi: ^3.0.0
   kiwi_generator: ^3.0.0
   location: ^4.3.0
+  location_permissions: ^4.0.0
+  path_provider: ^2.0.2
+  permission_handler: ^8.1.2
   provider: ^5.0.0
+  sembast: ^3.1.0+2
+  shared_preferences: ^2.0.6
+  sqflite: ^2.0.0+3
+  flutter_svg: ^0.22.0
 
 dev_dependencies:
   flutter_test:
@@ -32,4 +49,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/car_icon.png
+    - assets/

@@ -12,7 +12,7 @@ class ResultPage extends StatelessWidget {
             Padding(
               padding: EdgeInsets.all(20.0),
               child: Center(
-                child: mapViewModel.palaceDistance != null
+                child: mapViewModel.palaceDistance != 0
                     ? Text(
                         "Distance Covered : " +
                             mapViewModel.palaceDistance.toString(),
@@ -59,14 +59,14 @@ class ResultPage extends StatelessWidget {
                     ),
                   ],
                   rows: <DataRow>[
-                    mapViewModel.locationData != null
+                    mapViewModel.locationDto != null
                         ? DataRow(
                             cells: <DataCell>[
-                              DataCell(Text(mapViewModel.locationData.latitude
+                              DataCell(Text(mapViewModel.locationDto!.latitude
                                   .toString())),
-                              DataCell(Text(mapViewModel.locationData.longitude
+                              DataCell(Text(mapViewModel.locationDto!.longitude
                                   .toString())),
-                              DataCell(Text(mapViewModel.locationData.accuracy
+                              DataCell(Text(mapViewModel.locationDto!.accuracy
                                   .toString())),
                             ],
                           )
