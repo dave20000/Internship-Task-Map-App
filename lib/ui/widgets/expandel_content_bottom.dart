@@ -1,6 +1,7 @@
-import 'package:app_map/model/view_model/map_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:app_map/model/view_model/map_model.dart';
 
 class ExpandableContentBottom extends StatelessWidget {
   @override
@@ -15,9 +16,9 @@ class ExpandableContentBottom extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     Text("Accuracy: " +
-                        mapViewModel.locationDto!.accuracy.toString()),
-                    Text(
-                        "Speed: " + mapViewModel.locationDto!.speed.toString()),
+                        mapViewModel.locationDto!.accuracy.toStringAsFixed(3)),
+                    Text("Speed: " +
+                        mapViewModel.locationDto!.speed.toStringAsFixed(3)),
                   ],
                 )
               : Row(

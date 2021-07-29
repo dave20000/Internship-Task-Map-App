@@ -1,11 +1,11 @@
+import 'package:kiwi/kiwi.dart';
+
 import 'package:app_map/model/view_model/background_track_model.dart';
+import 'package:app_map/model/view_model/map_model.dart';
+import 'package:app_map/model/view_model/previous_tracks_model.dart';
 import 'package:app_map/services/databases/database_history_service.dart';
 import 'package:app_map/services/databases/database_service.dart';
 import 'package:app_map/services/databases/database_start_time.dart';
-import 'package:kiwi/kiwi.dart';
-
-import 'package:app_map/model/view_model/map_model.dart';
-import 'package:app_map/model/view_model/previous_tracks_model.dart';
 
 part 'service_locator.g.dart';
 

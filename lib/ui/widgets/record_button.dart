@@ -3,8 +3,6 @@ import 'package:background_locator/settings/android_settings.dart';
 import 'package:background_locator/settings/ios_settings.dart';
 import 'package:background_locator/settings/locator_settings.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart' as loc;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -12,6 +10,7 @@ import 'package:app_map/model/map_data.dart';
 import 'package:app_map/model/view_model/map_model.dart';
 import 'package:app_map/model/view_model/previous_tracks_model.dart';
 import 'package:app_map/services/location_callback_handler.dart';
+import 'package:app_map/ui/widgets/confirm_button_overlay.dart';
 
 class RecordButton extends StatefulWidget {
   @override
@@ -70,7 +69,7 @@ class _RecordButtonState extends State<RecordButton>
   Future<void> onStop() async {
     await BackgroundLocator.unRegisterLocationUpdate();
     final _isRunning = await BackgroundLocator.isServiceRunning();
-    print(_isRunning.toString());
+    print("is service running: " + _isRunning.toString());
   }
 
   @override
@@ -107,22 +106,30 @@ class _RecordButtonState extends State<RecordButton>
               onTap: () async {
                 if (mapViewModel.isMapCleared) {
                   if (mapViewModel.isRecordingStarted) {
-                    mapViewModel.isRecordingStarted = false;
-                    //_animationController.reverse();
-                    mapViewModel.isMapCleared = false;
-                    await onStop();
-                    await mapViewModel.deleteLocationDtoList();
-                    mapViewModel.locationDtos = [];
-                    await mapViewModel.deleteStartTime();
-                    mapViewModel.endTime = DateTime.now();
-                    await previousTrackViewModel.insertMapData(
-                      MapData(
-                        totalDistance: mapViewModel.palaceDistance,
-                        startTime: mapViewModel.startTime!,
-                        endTime: mapViewModel.endTime!,
-                        pointLatLngList: mapViewModel.pointLatLngList,
-                      ),
+                    var isConfirm = await showDialog(
+                      context: context,
+                      builder: (_) => ConfirmButtonOverlay(),
                     );
+                    if (isConfirm != null && isConfirm as bool) {
+                      mapViewModel.isRecordingStarted = false;
+                      //_animationController.reverse();
+                      mapViewModel.isMapCleared = false;
+                      await onStop();
+                      int len = mapViewModel.locationDtos.length;
+                      print("Location dto length: " + len.toString());
+                      await mapViewModel.deleteLocationDtoList();
+                      mapViewModel.locationDtos = [];
+                      await mapViewModel.deleteStartTime();
+                      mapViewModel.endTime = DateTime.now();
+                      await previousTrackViewModel.insertMapData(
+                        MapData(
+                          totalDistance: mapViewModel.palaceDistance,
+                          startTime: mapViewModel.startTime!,
+                          endTime: mapViewModel.endTime!,
+                          pointLatLngList: mapViewModel.pointLatLngList,
+                        ),
+                      );
+                    }
                   } else {
                     //_animationController.forward();
                     mapViewModel.isRecordingStarted = true;

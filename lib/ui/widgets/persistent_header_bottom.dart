@@ -1,6 +1,7 @@
-import 'package:app_map/model/view_model/map_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:app_map/model/view_model/map_model.dart';
 
 class PersistentHeaderBottom extends StatelessWidget {
   @override
@@ -14,7 +15,7 @@ class PersistentHeaderBottom extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Text(
-                "Distance Covered: " + mapViewModel.palaceDistance.toString(),
+                "Distance Covered: ${mapViewModel.palaceDistance.toStringAsFixed(2)} Km",
               ),
               mapViewModel.locationDto != null
                   ? Row(

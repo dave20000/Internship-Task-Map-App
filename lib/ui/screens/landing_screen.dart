@@ -1,8 +1,9 @@
 import 'package:after_layout/after_layout.dart';
-import 'package:app_map/ui/screens/map_page.dart';
-import 'package:app_map/ui/screens/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:app_map/ui/screens/map_page.dart';
+import 'package:app_map/ui/screens/onboarding_screen.dart';
 
 class LandingScreen extends StatefulWidget {
   @override

@@ -2,10 +2,16 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:ui';
 
-import 'package:app_map/services/app_constants.dart';
-import 'package:app_map/services/databases/database_service.dart';
+import 'package:app_map/model/map_data.dart';
+import 'package:app_map/services/databases/database_history_service.dart';
+import 'package:app_map/services/databases/database_start_time.dart';
 import 'package:background_locator/background_locator.dart';
 import 'package:background_locator/location_dto.dart';
+
+import 'package:app_map/services/app_constants.dart';
+import 'package:app_map/services/databases/database_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LocationServiceRepository {
   static LocationServiceRepository _instance = LocationServiceRepository._();
@@ -19,25 +25,12 @@ class LocationServiceRepository {
   MapLocationDatabaseService mapLocationDatabaseService =
       MapLocationDatabaseService();
 
-  int _count = -1;
+  // DatabaseHistoryService databaseHistoryService = DatabaseHistoryService();
+  // DataBaseStartTimeService dataBaseStartTimeService =
+  //     DataBaseStartTimeService();
 
   Future<void> init(Map<dynamic, dynamic> params) async {
     print("***********Init callback handler");
-    if (params.containsKey('countInit')) {
-      dynamic tmpCount = params['countInit'];
-      if (tmpCount is double) {
-        _count = tmpCount.toInt();
-      } else if (tmpCount is String) {
-        _count = int.parse(tmpCount);
-      } else if (tmpCount is int) {
-        _count = tmpCount;
-      } else {
-        _count = -2;
-      }
-    } else {
-      _count = 0;
-    }
-    print("$_count");
     final SendPort? send =
         IsolateNameServer.lookupPortByName(AppConstants.isolateName);
     send!.send(null);
@@ -45,34 +38,52 @@ class LocationServiceRepository {
 
   Future<void> dispose() async {
     print("***********Dispose callback handler");
-    print("$_count");
     final SendPort? send =
         IsolateNameServer.lookupPortByName(AppConstants.isolateName);
     send!.send(null);
   }
 
   Future<void> callback(LocationDto locationDto) async {
-    //print('$_count location in dart: ${locationDto.toString()}');
     await mapLocationDatabaseService.insertLocationDto(locationDto);
     _updateNotificationText(locationDto);
-    // print(
-    //   locationDto.latitude.toString() +
-    //       " " +
-    //       locationDto.longitude.toString() +
-    //       " " +
-    //       locationDto.speed.toString(),
-    // );
     final SendPort? send =
         IsolateNameServer.lookupPortByName(AppConstants.isolateName);
     send?.send(locationDto);
-    _count++;
+    // bool isGiven = await _checkPermissionStatus();
+    // print("Location callback cheking permission given :" + isGiven.toString());
+    // if (isGiven) {
+    //   await mapLocationDatabaseService.insertLocationDto(locationDto);
+    //   _updateNotificationText(locationDto);
+    //   final SendPort? send =
+    //       IsolateNameServer.lookupPortByName(AppConstants.isolateName);
+    //   send?.send(locationDto);
+    // } else {
+    //   onStop();
+    //   var locDtos = await mapLocationDatabaseService.getLocations();
+    //   List<LatLng> pointLatLngList = [];
+    //   locDtos.forEach((element) {
+    //     pointLatLngList.add(LatLng(element.latitude, element.longitude));
+    //   });
+    //   print("Location dto length: " + locDtos.toString());
+    //   await mapLocationDatabaseService.deleteLocations();
+    //   databaseHistoryService.insertMapData(
+    //     MapData(
+    //       totalDistance: 0,
+    //       startTime: await dataBaseStartTimeService.getStartTime(),
+    //       endTime: DateTime.now(),
+    //       pointLatLngList: pointLatLngList,
+    //     ),
+    //   );
+    // }
   }
 
   Future<void> _updateNotificationText(LocationDto data) async {
     await BackgroundLocator.updateNotificationText(
-      title: "new location received",
-      msg: "${DateTime.now()}",
-      bigMsg: "${data.latitude}, ${data.longitude}",
+      title: "Map App",
+      // msg:
+      //     "Time Elapsed: ${(DateTime.now().difference(DateTime.parse(data.time.toString()))).toString().split('.').first.padLeft(8, "0")}",
+      msg: "${(DateTime.now())}",
+      bigMsg: "Lat: ${data.latitude},Lon: ${data.longitude}",
     );
   }
 }

@@ -84,6 +84,27 @@ class DatabaseHistoryService {
     }
   }
 
+  Future<void> deleteMapData(MapData mapData) async {
+    try {
+      final dbClient = await database;
+      int count = await store.delete(
+        dbClient,
+        finder: Finder(
+          filter: Filter.custom((record) {
+            if (mapData.toJson() == record.value) {
+              return true;
+            }
+            return false;
+          }),
+        ),
+      );
+      print(count);
+    } catch (e) {
+      //close();
+      throw Exception(e.toString());
+    }
+  }
+
   Future close() async {
     var dbClient = await database;
     dbClient.close();

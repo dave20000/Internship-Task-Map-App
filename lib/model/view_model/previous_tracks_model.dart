@@ -1,7 +1,7 @@
-import 'package:app_map/services/databases/database_history_service.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:app_map/model/map_data.dart';
+import 'package:app_map/services/databases/database_history_service.dart';
 
 class PreviousTrackViewModel extends ChangeNotifier {
   DatabaseHistoryService _databaseHistoryService;
@@ -29,5 +29,12 @@ class PreviousTrackViewModel extends ChangeNotifier {
   Future<void> deleteMapDatas() async {
     await _databaseHistoryService.deleteMapDatas();
     getMapDatas();
+  }
+
+  Future<void> deleteMapData(MapData mapData) async {
+    await _databaseHistoryService.deleteMapData(mapData);
+    getMapDatas();
+    // _mapDatas.remove(mapData);
+    // notifyListeners();
   }
 }

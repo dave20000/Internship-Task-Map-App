@@ -1,8 +1,9 @@
-import 'package:app_map/model/view_model/map_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ResultPage extends StatelessWidget {
+import 'package:app_map/model/view_model/map_model.dart';
+
+class DetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<MapViewModel>(
@@ -15,7 +16,8 @@ class ResultPage extends StatelessWidget {
                 child: mapViewModel.palaceDistance != 0
                     ? Text(
                         "Distance Covered : " +
-                            mapViewModel.palaceDistance.toString(),
+                            mapViewModel.palaceDistance.toStringAsFixed(2) +
+                            ' km',
                         style: TextStyle(fontSize: 22),
                       )
                     : Text(

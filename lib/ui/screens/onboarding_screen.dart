@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:introduction_screen/introduction_screen.dart';
-import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:app_map/services/location_permission_helper.dart';
 import 'package:app_map/ui/screens/map_page.dart';
 
 class OnBoardingScreen extends StatefulWidget {
-  static String id = 'OnboardingScreen';
   @override
   _OnBoardingScreenState createState() => _OnBoardingScreenState();
 }
 
 class _OnBoardingScreenState extends State<OnBoardingScreen> {
   bool isPermissionGiven = false;
+  LocationPermissionHelper locationPermissionHelper =
+      LocationPermissionHelper();
+
   final introKey = GlobalKey<IntroductionScreenState>();
 
   void _onIntroEnd(context) async {
@@ -70,10 +71,34 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
           image: Image.asset('assets/map_loc.png'),
           footer: ElevatedButton(
             onPressed: () async {
-              bool status = await checkGps();
+              bool status =
+                  await locationPermissionHelper.handleOnboardingPermission();
               setState(() {
                 isPermissionGiven = status;
               });
+              if (!isPermissionGiven) {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: Text("Permission not given"),
+                      content: Text(
+                          "Please give location permission before procedding"),
+                      actions: [
+                        TextButton(
+                          child: Text("Open permission setting"),
+                          onPressed: () async {
+                            locationPermissionHelper.openAppSettings();
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              } else {
+                print("Permission Granted");
+              }
             },
             child: Text(
               'Get location',
@@ -110,16 +135,5 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
         ),
       ),
     );
-  }
-
-  Future<bool> checkGps() async {
-    var _permissionGranted = await Location().hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await Location().requestPermission();
-    }
-    if (_permissionGranted != PermissionStatus.granted) {
-      return false;
-    }
-    return true;
   }
 }

@@ -1,18 +1,20 @@
+import 'dart:async';
 import 'dart:isolate';
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:background_locator/background_locator.dart';
 import 'package:background_locator/location_dto.dart';
 import 'package:expandable_bottom_sheet/expandable_bottom_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
 
+import 'package:app_map/model/map_data.dart';
 import 'package:app_map/model/view_model/map_model.dart';
 import 'package:app_map/model/view_model/previous_tracks_model.dart';
 import 'package:app_map/services/app_constants.dart';
-import 'package:app_map/ui/screens/result_page.dart';
+import 'package:app_map/services/location_permission_helper.dart';
+import 'package:app_map/ui/screens/details_page.dart';
 import 'package:app_map/ui/widgets/base_widget.dart';
 import 'package:app_map/ui/widgets/clear_map_button.dart';
 import 'package:app_map/ui/widgets/expandel_content_bottom.dart';
@@ -21,94 +23,99 @@ import 'package:app_map/ui/widgets/persistent_header_bottom.dart';
 import 'package:app_map/ui/widgets/record_button.dart';
 
 class MapPage extends StatefulWidget {
-  static String id = 'MapPage';
   @override
   _MapPageState createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
+class _MapPageState extends State<MapPage>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   GoogleMapController? _mapController;
   ReceivePort port = ReceivePort();
-  Location location = Location();
 
   bool _myLocationEnabled = false;
+
+  LocationPermissionHelper locationPermissionHelper =
+      LocationPermissionHelper();
+  StreamSubscription<ServiceStatus>? _serviceStatusStreamSubscription;
+
+  late AnimationController _appBarAnimationController;
+
+  Future<void> _getCurrentPosition(
+      MapViewModel mapViewModel, bool isMoveCamera) async {
+    final hasLocationService =
+        await locationPermissionHelper.handleLocationService();
+    if (hasLocationService) {
+      final hasPermission = await locationPermissionHelper.handlePermission();
+      if (hasPermission) {
+        setState(() {
+          _myLocationEnabled = true;
+        });
+        Position position = await locationPermissionHelper.geolocatorPlatform
+            .getCurrentPosition();
+        mapViewModel.initialLocation = CameraPosition(
+          bearing: 0,
+          target: LatLng(
+            position.latitude,
+            position.longitude,
+          ),
+          zoom: 14.0,
+        );
+        if (isMoveCamera) {
+          _mapController!.animateCamera(
+            CameraUpdate.newCameraPosition(
+              mapViewModel.initialLocation!,
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _myLocationEnabled = false;
+        });
+        print('Permission Denied');
+        locationPermissionDialog(context);
+      }
+    } else {
+      locationServiceStatusDialog(context);
+    }
+  }
+
+  void _toggleServiceStatusStream() {
+    if (_serviceStatusStreamSubscription == null) {
+      final serviceStatusStream =
+          locationPermissionHelper.geolocatorPlatform.getServiceStatusStream();
+      _serviceStatusStreamSubscription =
+          serviceStatusStream.handleError((error) {
+        _serviceStatusStreamSubscription?.cancel();
+        _serviceStatusStreamSubscription = null;
+      }).listen(
+        (serviceStatus) {
+          if (serviceStatus == ServiceStatus.enabled) {
+            setState(() {
+              _myLocationEnabled = true;
+            });
+            print('Service Enabled');
+          } else {
+            setState(() {
+              _myLocationEnabled = false;
+            });
+            print('Service Disabled');
+            locationServiceStatusDialog(context);
+          }
+        },
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _checkPermissionStatus();
-    WidgetsBinding.instance!.addObserver(this);
+    _appBarAnimationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 250),
+    );
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      _checkServiceStatus();
-      _checkPermissionStatus();
-    }
-  }
-
-  Future<void> _checkServiceStatus() async {
-    var _serviceEnabled = await location.serviceEnabled();
-    if (_serviceEnabled) {
-      print('Service Enabled');
-    } else {
-      print('Service not Enabled');
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Location Service not enabled"),
-            content: Text("Please Enable location service"),
-            actions: [
-              TextButton(
-                child: Text("Okay"),
-                onPressed: () async {
-                  _serviceEnabled = await location.requestService();
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
-  Future<void> _checkPermissionStatus() async {
-    var status = await location.hasPermission();
-    if (status == PermissionStatus.granted) {
-      setState(() {
-        _myLocationEnabled = true;
-      });
-      print('Permission granted');
-    } else if (status == PermissionStatus.denied) {
-      setState(() {
-        _myLocationEnabled = false;
-      });
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Permission not given"),
-            content: Text("Please give location permission before procedding"),
-            actions: [
-              TextButton(
-                child: Text("Okay"),
-                onPressed: () async {
-                  status = await location.requestPermission();
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          );
-        },
-      );
-      //_checkPermission();
-    } else if (status == PermissionStatus.deniedForever) {
-      print('Take the user to the settings page.');
-    }
-  }
+  GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey();
 
   void updateMarker(MapViewModel mapViewModel, LocationDto locationDto,
       List<LatLng> pointsL) {
@@ -154,15 +161,20 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     updateMarker(mapViewModel, locationDto, mapViewModel.pointLatLngList);
     int len = mapViewModel.pointLatLngList.length;
     if (len > 1) {
-      double distance = calculateDistance(
-        mapViewModel.pointLatLngList[len - 1],
-        mapViewModel.pointLatLngList[len - 2],
+      double distance =
+          locationPermissionHelper.geolocatorPlatform.distanceBetween(
+        mapViewModel.pointLatLngList[len - 1].latitude,
+        mapViewModel.pointLatLngList[len - 1].longitude,
+        mapViewModel.pointLatLngList[len - 2].latitude,
+        mapViewModel.pointLatLngList[len - 2].longitude,
       );
+      distance = distance / 1000;
       mapViewModel.locationDto = locationDto;
       mapViewModel.palaceDistance = mapViewModel.palaceDistance + distance;
-    } else {}
+    }
   }
 
+  bool isDrawerOpen = false;
   @override
   Widget build(BuildContext context) {
     return BaseWidget<PreviousTrackViewModel>(
@@ -172,39 +184,12 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       builder: (context, previousTrackViewModel, child) {
         return BaseWidget<MapViewModel>(
           onModelReady: (mapViewModel) async {
-            //await _checkGps();
+            _toggleServiceStatusStream();
             print('Initializing...');
-            await BackgroundLocator.initialize();
-            List<LocationDto> locationDtoList =
-                await mapViewModel.getLocationDtoList();
-            // locationDtoList.forEach((element) {
-            //   print(element.toString());
-            // });
-            mapViewModel.locationDtos = locationDtoList;
-            if (mapViewModel.locationDtos.length != 0) {
-              mapViewModel.locationDtos.forEach(
-                (element) {
-                  updateData(mapViewModel, element);
-                },
-              );
-              mapViewModel.startTime = await mapViewModel.getStartTime();
-              mapViewModel.isRecordingStarted = true;
-            } else {
-              LocationData currentLocation = await location.getLocation();
-              mapViewModel.initialLocation = CameraPosition(
-                bearing: 0,
-                target: LatLng(
-                  currentLocation.latitude!,
-                  currentLocation.longitude!,
-                ),
-                zoom: 17.0,
-              );
-              mapViewModel.isRecordingStarted = false;
-            }
+            await initStart(mapViewModel, previousTrackViewModel, context);
             print('Initialization done');
             var serviceRunning = await BackgroundLocator.isServiceRunning();
             print('Running ${serviceRunning.toString()}');
-
             if (IsolateNameServer.lookupPortByName(AppConstants.isolateName) !=
                 null) {
               IsolateNameServer.removePortNameMapping(AppConstants.isolateName);
@@ -217,18 +202,44 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
               (dynamic data) async {
                 if (data != null) {
                   LocationDto locationDto = data;
-                  mapViewModel.locationDto = locationDto;
+                  mapViewModel.locationDto = data as LocationDto;
                   await mapViewModel.insertLocationDtotoDb(locationDto);
                   updateData(mapViewModel, locationDto);
                 }
               },
             );
           },
+          onDispose: (mapViewModel) {
+            _serviceStatusStreamSubscription?.cancel();
+            _serviceStatusStreamSubscription = null;
+          },
           builder: (context, mapViewModel, child) {
             return SafeArea(
               child: Scaffold(
                 appBar: AppBar(
-                  title: Text("Map App"),
+                  leading: IconButton(
+                    icon: AnimatedIcon(
+                      icon: AnimatedIcons.menu_arrow,
+                      progress: _appBarAnimationController,
+                    ),
+                    onPressed: () {
+                      if (_scaffoldKey.currentState!.isDrawerOpen == false) {
+                        _scaffoldKey.currentState!.openDrawer();
+                        _appBarAnimationController.forward();
+                        setState(() {
+                          isDrawerOpen = true;
+                        });
+                      } else {
+                        _scaffoldKey.currentState!.openEndDrawer();
+                        _appBarAnimationController.reverse();
+                        setState(() {
+                          isDrawerOpen = false;
+                        });
+                      }
+                    },
+                  ),
+                  title:
+                      !isDrawerOpen ? Text("Map App") : Text("Past Trip Data"),
                   actions: <Widget>[
                     IconButton(
                       icon: Icon(
@@ -236,104 +247,72 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                         color: Colors.white,
                       ),
                       onPressed: () async {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: Text("Delete"),
-                              content: Text(
-                                "Are you sure you want to delete all track data?",
-                              ),
-                              actions: [
-                                TextButton(
-                                  child: Text("Cancel"),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                                TextButton(
-                                  child: Text("Continue"),
-                                  onPressed: () async {
-                                    await previousTrackViewModel
-                                        .deleteMapDatas();
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        );
+                        await deleteDialog(context, previousTrackViewModel);
                       },
                     )
                   ],
                 ),
-                drawer: MapDrawer(),
-                body: IndexedStack(
-                  index: mapViewModel.currentIndex,
-                  children: [
-                    ExpandableBottomSheet(
-                      background: Stack(
-                        children: [
-                          GoogleMap(
-                            zoomControlsEnabled: false,
-                            mapType: MapType.normal,
-                            initialCameraPosition:
-                                mapViewModel.initialLocation ??
-                                    CameraPosition(
-                                      target: LatLng(
-                                        52.1885,
-                                        5.34271,
+                body: Scaffold(
+                  key: _scaffoldKey,
+                  onDrawerChanged: (isOpened) {
+                    setState(() {
+                      isDrawerOpen = isOpened;
+                    });
+                    if (isOpened) {
+                      _appBarAnimationController.forward();
+                    } else {
+                      _appBarAnimationController.reverse();
+                    }
+                  },
+                  onEndDrawerChanged: (isOpened) {},
+                  drawer: MapDrawer(),
+                  body: IndexedStack(
+                    index: mapViewModel.currentIndex,
+                    children: [
+                      ExpandableBottomSheet(
+                        background: Stack(
+                          children: [
+                            GoogleMap(
+                              zoomControlsEnabled: false,
+                              mapType: MapType.normal,
+                              initialCameraPosition:
+                                  mapViewModel.initialLocation ??
+                                      CameraPosition(
+                                        target: LatLng(
+                                          52.1885,
+                                          5.34271,
+                                        ),
+                                        zoom: 11.5,
                                       ),
-                                      zoom: 11.5,
-                                    ),
-                            markers: Set.of((mapViewModel.marker != null)
-                                ? [mapViewModel.marker!]
-                                : []),
-                            onMapCreated: (GoogleMapController controller) {
-                              _mapController = controller;
-                            },
-                            polylines: mapViewModel.polyline,
-                            myLocationEnabled: _myLocationEnabled,
-                            myLocationButtonEnabled: false,
-                          ),
-                          Positioned(
-                            bottom: 130,
-                            right: 15,
-                            child: ClearMapButton(),
-                          ),
-                          Positioned(
-                            bottom: 70,
-                            right: 15,
-                            child: RecordButton(),
-                          ),
-                          Positioned(
-                            bottom: MediaQuery.of(context).size.height / 3.0,
-                            right: 15,
-                            child: GestureDetector(
-                              onTap: () {
-                                _currentLocation(mapViewModel);
+                              markers: Set.of((mapViewModel.marker != null)
+                                  ? [mapViewModel.marker!]
+                                  : []),
+                              onMapCreated: (GoogleMapController controller) {
+                                _mapController = controller;
                               },
-                              child: Container(
-                                padding: EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.blueGrey.shade300,
-                                ),
-                                child: Icon(
-                                  Icons.location_searching,
-                                  size: 30,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              polylines: mapViewModel.polyline,
+                              myLocationEnabled: _myLocationEnabled,
+                              myLocationButtonEnabled: false,
                             ),
-                          )
-                        ],
+                            sideMapButtons(mapViewModel),
+                            Positioned(
+                              bottom: 130,
+                              right: 8,
+                              child: ClearMapButton(),
+                            ),
+                            Positioned(
+                              bottom: 70,
+                              right: 8,
+                              child: RecordButton(),
+                            ),
+                          ],
+                        ),
+                        persistentHeader: PersistentHeaderBottom(),
+                        expandableContent: ExpandableContentBottom(),
                       ),
-                      persistentHeader: PersistentHeaderBottom(),
-                      expandableContent: ExpandableContentBottom(),
-                    ),
-                    ResultPage(),
-                  ],
+                      DetailsPage(),
+                    ],
+                  ),
                 ),
                 bottomNavigationBar: Theme(
                   data: Theme.of(context).copyWith(
@@ -366,67 +345,207 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  void _currentLocation(MapViewModel mapViewModel) async {
-    bool permissionGiven = await checkGps();
-    if (permissionGiven) {
-      LocationData? currentLocation;
-      try {
-        currentLocation = await location.getLocation();
-      } on Exception {
-        currentLocation = null;
-      }
-      if (currentLocation != null) {
-        mapViewModel.initialLocation = CameraPosition(
-          bearing: 0,
-          target: LatLng(
-            currentLocation.latitude!,
-            currentLocation.longitude!,
+  deleteDialog(BuildContext context,
+      PreviousTrackViewModel previousTrackViewModel) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Delete"),
+          content: Text(
+            "Are you sure you want to delete all track data?",
           ),
-          zoom: 17.0,
+          actions: [
+            TextButton(
+              child: Text("Cancel"),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            TextButton(
+              child: Text("Continue"),
+              onPressed: () async {
+                await previousTrackViewModel.deleteMapDatas();
+                Navigator.pop(context);
+              },
+            ),
+          ],
         );
-        _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            mapViewModel.initialLocation!,
-          ),
-        );
+      },
+    );
+  }
+
+  Future<void> initStart(
+      MapViewModel mapViewModel,
+      PreviousTrackViewModel previousTrackViewModel,
+      BuildContext context) async {
+    await BackgroundLocator.initialize();
+    mapViewModel.locationDtos = await mapViewModel.getLocationDtoList();
+    if (mapViewModel.locationDtos.length != 0) {
+      mapViewModel.startTime = await mapViewModel.getStartTime();
+      mapViewModel.locationDtos.forEach(
+        (element) {
+          updateData(mapViewModel, element);
+        },
+      );
+      bool isServiceEnabled =
+          await locationPermissionHelper.handleLocationService();
+      if (isServiceEnabled) {
+        bool isPermissionEnabled =
+            await locationPermissionHelper.handlePermission();
+        if (isPermissionEnabled) {
+          _getCurrentPosition(mapViewModel, false);
+          mapViewModel.isRecordingStarted = true;
+        } else {
+          await stopRecording(mapViewModel, previousTrackViewModel);
+          locationPermissionDialog(context);
+        }
+        _getCurrentPosition(mapViewModel, false);
+        mapViewModel.isRecordingStarted = true;
       } else {
-        print("location not found error");
+        await stopRecording(mapViewModel, previousTrackViewModel);
+        locationServiceStatusDialog(context);
       }
     } else {
-      print("Permission not get error");
+      _getCurrentPosition(mapViewModel, true);
+      mapViewModel.isRecordingStarted = false;
     }
   }
 
-  Future<bool> checkGps() async {
-    var _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-    }
-    if (_permissionGranted != PermissionStatus.granted) {
-      return false;
-    }
-    return true;
-  }
-
-  double _coordinateDistance(
-      double lat1, double lon1, double lat2, double lon2) {
-    var p = 0.017453292519943295;
-    var c = cos;
-    var a = 0.5 -
-        c((lat2 - lat1) * p) / 2 +
-        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a));
-  }
-
-  double calculateDistance(LatLng latLng1, LatLng latLng2) {
-    double distance = 0.0;
-    distance += _coordinateDistance(
-      latLng1.latitude,
-      latLng1.longitude,
-      latLng2.latitude,
-      latLng2.longitude,
+  Future<dynamic> locationPermissionDialog(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Permission not given"),
+          content: Text("Please give location permission before procedding"),
+          actions: [
+            TextButton(
+              child: Text("Open permission setting"),
+              onPressed: () async {
+                locationPermissionHelper.openAppSettings();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
     );
-    print(distance);
-    return distance;
+  }
+
+  Future<dynamic> locationServiceStatusDialog(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Location Service not enabled"),
+          content:
+              Text("Please Enable location service from setting to continue"),
+          actions: [
+            TextButton(
+              child: Text("Open location setting"),
+              onPressed: () async {
+                locationPermissionHelper.openLocationSettings();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> stopRecording(MapViewModel mapViewModel,
+      PreviousTrackViewModel previousTrackViewModel) async {
+    mapViewModel.isRecordingStarted = false;
+    mapViewModel.isMapCleared = false;
+    await onStop();
+    await mapViewModel.deleteLocationDtoList();
+    mapViewModel.locationDtos = [];
+    await mapViewModel.deleteStartTime();
+    mapViewModel.endTime = DateTime.now();
+    await previousTrackViewModel.insertMapData(
+      MapData(
+        totalDistance: mapViewModel.palaceDistance,
+        startTime: mapViewModel.startTime!,
+        endTime: mapViewModel.endTime!,
+        pointLatLngList: mapViewModel.pointLatLngList,
+      ),
+    );
+  }
+
+  Future<void> onStop() async {
+    await BackgroundLocator.unRegisterLocationUpdate();
+    final _isRunning = await BackgroundLocator.isServiceRunning();
+    print(_isRunning.toString());
+  }
+
+  Padding sideMapButtons(MapViewModel mapViewModel) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: () {
+                _mapController!.animateCamera(CameraUpdate.zoomOut());
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.rectangle,
+                  color: Colors.blueGrey.shade300,
+                ),
+                child: Icon(
+                  Icons.remove,
+                  size: 30,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 10,
+            ),
+            GestureDetector(
+              onTap: () {
+                _mapController!.animateCamera(CameraUpdate.zoomIn());
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.rectangle,
+                  color: Colors.blueGrey.shade300,
+                ),
+                child: Icon(
+                  Icons.add,
+                  size: 30,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 10,
+            ),
+            GestureDetector(
+              onTap: () {
+                _getCurrentPosition(mapViewModel, true);
+              },
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blueGrey.shade300,
+                ),
+                child: Icon(
+                  Icons.location_searching,
+                  size: 30,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

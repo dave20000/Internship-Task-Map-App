@@ -1,6 +1,7 @@
-import 'package:app_map/model/view_model/map_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:app_map/model/view_model/map_model.dart';
 
 class ClearMapButton extends StatelessWidget {
   @override

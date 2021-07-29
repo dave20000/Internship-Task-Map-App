@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:app_map/services/location_service_repository.dart';
 import 'package:background_locator/location_dto.dart';
+
+import 'package:app_map/services/location_service_repository.dart';
 
 class LocationCallbackHandler {
   static Future<void> initCallback(Map<dynamic, dynamic> params) async {

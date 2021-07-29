@@ -1,9 +1,8 @@
+import 'dart:async';
 import 'dart:core';
-import 'dart:io';
+
 import 'package:background_locator/location_dto.dart';
 import 'package:path/path.dart';
-//import 'package:sqflite/sqflite.dart';
-import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
@@ -59,6 +58,7 @@ class MapLocationDatabaseService {
     try {
       var dbClient = await database;
       await store.add(dbClient, locationDto.toJson());
+      print("mf i am here");
     } catch (e) {
       //close();
       throw Exception(e.toString());

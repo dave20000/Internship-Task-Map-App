@@ -1,9 +1,10 @@
-import 'package:app_map/services/databases/database_service.dart';
-import 'package:app_map/services/databases/database_start_time.dart';
 import 'package:background_locator/location_dto.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
+
+import 'package:app_map/services/databases/database_service.dart';
+import 'package:app_map/services/databases/database_start_time.dart';
+import 'package:slidable_button/slidable_button.dart';
 
 class MapViewModel extends ChangeNotifier {
   MapLocationDatabaseService _mapLocationDatabaseService;
@@ -16,6 +17,7 @@ class MapViewModel extends ChangeNotifier {
   LocationDto? _locationDto;
   double _palaceDistance = 0;
   bool _isRecordingStarted = false;
+
   bool _isMapCleared = true;
   bool get isMapCleared => this._isMapCleared;
 
@@ -119,6 +121,11 @@ class MapViewModel extends ChangeNotifier {
 
   Future<void> insertLocationDtotoDb(LocationDto locationDto) async {
     await _mapLocationDatabaseService.insertLocationDto(locationDto);
+    this._locationDtos.add(locationDto);
+    notifyListeners();
+  }
+
+  Future<void> addLocationDto(LocationDto locationDto) async {
     this._locationDtos.add(locationDto);
     notifyListeners();
   }

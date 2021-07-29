@@ -1,10 +1,11 @@
 import 'dart:isolate';
 import 'dart:ui';
 
-import 'package:app_map/services/app_constants.dart';
-import 'package:app_map/services/databases/database_service.dart';
 import 'package:background_locator/location_dto.dart';
 import 'package:flutter/widgets.dart';
+
+import 'package:app_map/services/app_constants.dart';
+import 'package:app_map/services/databases/database_service.dart';
 
 class BackgroundTrackViewModel extends ChangeNotifier {
   MapLocationDatabaseService _mapLocationDatabaseService;
