@@ -1,8 +1,9 @@
-import 'package:app_map/model/view_model/map_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ResultPage extends StatelessWidget {
+import 'package:app_map/model/view_model/map_model.dart';
+
+class DetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<MapViewModel>(
@@ -12,10 +13,11 @@ class ResultPage extends StatelessWidget {
             Padding(
               padding: EdgeInsets.all(20.0),
               child: Center(
-                child: mapViewModel.palaceDistance != null
+                child: mapViewModel.palaceDistance != 0
                     ? Text(
                         "Distance Covered : " +
-                            mapViewModel.palaceDistance.toString(),
+                            mapViewModel.palaceDistance.toStringAsFixed(2) +
+                            ' km',
                         style: TextStyle(fontSize: 22),
                       )
                     : Text(
@@ -59,14 +61,14 @@ class ResultPage extends StatelessWidget {
                     ),
                   ],
                   rows: <DataRow>[
-                    mapViewModel.locationData != null
+                    mapViewModel.locationDto != null
                         ? DataRow(
                             cells: <DataCell>[
-                              DataCell(Text(mapViewModel.locationData.latitude
+                              DataCell(Text(mapViewModel.locationDto!.latitude
                                   .toString())),
-                              DataCell(Text(mapViewModel.locationData.longitude
+                              DataCell(Text(mapViewModel.locationDto!.longitude
                                   .toString())),
-                              DataCell(Text(mapViewModel.locationData.accuracy
+                              DataCell(Text(mapViewModel.locationDto!.accuracy
                                   .toString())),
                             ],
                           )

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:app_map/model/map_data.dart';
+
 class MapPreviewScreen extends StatefulWidget {
-  final List<LatLng> latLngPoints;
-  const MapPreviewScreen({
-    required this.latLngPoints,
+  final MapData mapData;
+  MapPreviewScreen({
+    required this.mapData,
   });
   @override
   _MapPreviewScreenState createState() => _MapPreviewScreenState();
@@ -22,14 +24,14 @@ class _MapPreviewScreenState extends State<MapPreviewScreen> {
   void initState() {
     initialLocation = CameraPosition(
       target: LatLng(
-        widget.latLngPoints[0].latitude,
-        widget.latLngPoints[0].longitude,
+        widget.mapData.pointLatLngList[0].latitude,
+        widget.mapData.pointLatLngList[0].longitude,
       ),
-      zoom: 14,
+      zoom: 16,
     );
     _markers.add(Marker(
       markerId: MarkerId("home"),
-      position: widget.latLngPoints[0],
+      position: widget.mapData.pointLatLngList[0],
       draggable: false,
       zIndex: 2,
       icon: BitmapDescriptor.defaultMarkerWithHue(
@@ -38,7 +40,8 @@ class _MapPreviewScreenState extends State<MapPreviewScreen> {
     ));
     _markers.add(Marker(
       markerId: MarkerId("home"),
-      position: widget.latLngPoints[widget.latLngPoints.length - 1],
+      position: widget
+          .mapData.pointLatLngList[widget.mapData.pointLatLngList.length - 1],
       draggable: false,
       zIndex: 2,
       icon: BitmapDescriptor.defaultMarkerWithHue(
@@ -50,7 +53,7 @@ class _MapPreviewScreenState extends State<MapPreviewScreen> {
         "PolyLines",
       ),
       visible: true,
-      points: widget.latLngPoints,
+      points: widget.mapData.pointLatLngList,
       color: Colors.blue,
     ));
     super.initState();
@@ -59,6 +62,11 @@ class _MapPreviewScreenState extends State<MapPreviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Preview",
+        ),
+      ),
       body: GoogleMap(
         zoomControlsEnabled: false,
         mapType: MapType.normal,

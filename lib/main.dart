@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:app_map/services/service_locator.dart';
-import 'package:app_map/ui/screens/home_screen.dart';
+import 'package:app_map/ui/screens/landing_screen.dart';
 
 void main() {
   ServiceLocator.setup();
@@ -13,11 +13,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Maps',
+      title: 'Map App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.blueGrey,
       ),
-      home: HomeScreen(),
+      home: LandingScreen(),
     );
   }
 }
